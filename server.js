@@ -42,23 +42,26 @@ io.on('connection', async (socket) => {
     console.log({ userId, body, roomId })
 
     await redisSet({ key: userId, val: body }, socket);
-    cb({ status: 'ok' });
+    cb({ status: 'OK' });
   }
 
   async function removeUser({ userId }) {
     if (userId) await redis.del(userId);
-    // cb({ status: 'ok' });
+    // cb({ status: 'OK' });
   }
 
   setInterval(async () => {
     const drivers = await redisGet({}, socket);
     socket.emit('driver-loc-change', drivers);
     console.log({ drivers });
-  }, 60 * 1000)
+  }, 5 * 1000)
 
   socket.on('join-room', socketErrorHandler(joinRoom, socket));
   socket.on("change-location", socketErrorHandler(changeLocation, socket));
-  socket.on('disconnect', socketErrorHandler(removeUser, socket));
+  socket.on("driver-disconnect", socketErrorHandler(removeUser, socket));
+  socket.on('disconnect', () => {
+    console.log("a user disconnected.");
+  });
 });
 
 app.get('/', (req, res) => {
