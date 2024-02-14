@@ -4,6 +4,9 @@ const express = require('express');
 const { Server } = require('socket.io');
 const { connectDatabase } = require("./config/database");
 
+const { socketErrorHandler } = require("./utils/errorHandler");
+const { redis, redisGet, redisSet, redisDel } = require("./utils/redis");
+
 dotenv.config({ path: "./config/config.env" });
 
 const app = express();
@@ -17,17 +20,14 @@ const io = new Server(server, {
 
 connectDatabase();
 
-const errorHandler = (fun) => (data, cb) => {
-  console.log({ fun, data, cb })
+// --------------------------- REDIS ------------------------------
+(async () => {
+  await redis.connect();
+  // await redis.flushAll();
+})();
+// ---------------------------------------------------------------
 
-  try {
-    fun(data, cb);
-  } catch (error) {
-    console.log({ err_msg: error.message });
-  }
-};
-
-io.on('connection', (socket) => {
+io.on('connection', async (socket) => {
   console.log("a user is connected");
 
   function joinRoom(roomId, cb) {
@@ -35,17 +35,30 @@ io.on('connection', (socket) => {
     cb({ status: 'OK' });
   }
 
-  function changeLocation({ roomId, loc }, cb) {
-    socket.to(roomId).emit('new-location', loc);
+  async function changeLocation({ userId, body, roomId }, cb) {
+    if (roomId) {
+      socket.to(roomId).emit('new-location', body);
+    }
+    console.log({ userId, body, roomId })
+
+    await redisSet({ key: userId, val: body }, socket);
     cb({ status: 'ok' });
   }
 
-  socket.on('join-room', errorHandler(joinRoom));
-  socket.on("change-location", errorHandler(changeLocation));
+  async function removeUser({ userId }) {
+    if (userId) await redis.del(userId);
+    // cb({ status: 'ok' });
+  }
 
-  socket.on('disconnect', () => {
-    console.log("a user is disconnected");
-  })
+  setInterval(async () => {
+    const drivers = await redisGet({}, socket);
+    socket.emit('driver-loc-change', drivers);
+    console.log({ drivers });
+  }, 60 * 1000)
+
+  socket.on('join-room', socketErrorHandler(joinRoom, socket));
+  socket.on("change-location", socketErrorHandler(changeLocation, socket));
+  socket.on('disconnect', socketErrorHandler(removeUser, socket));
 });
 
 app.get('/', (req, res) => {
@@ -55,5 +68,5 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
-  console.log(`socket listening on ${PORT}`);
+  console.log(`SOCKET - Listening on ${PORT}`);
 })
