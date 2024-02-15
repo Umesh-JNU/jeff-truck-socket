@@ -28,7 +28,8 @@ connectDatabase();
 // ---------------------------------------------------------------
 
 io.on('connection', async (socket) => {
-  console.log("a user is connected");
+  const id = socket.id;
+  console.log(`a user is connected - ${id}`);
 
   function joinRoom(roomId, cb) {
     socket.join(roomId);
@@ -41,26 +42,21 @@ io.on('connection', async (socket) => {
     }
     console.log({ userId, body, roomId })
 
-    await redisSet({ key: userId, val: body }, socket);
+    await redisSet({ key: id, val: body }, socket);
     cb({ status: 'OK' });
-  }
-
-  async function removeUser({ userId }) {
-    if (userId) await redis.del(userId);
-    // cb({ status: 'OK' });
   }
 
   setInterval(async () => {
     const drivers = await redisGet({}, socket);
     socket.emit('driver-loc-change', drivers);
     console.log({ drivers });
-  }, 5 * 1000)
+  }, 60 * 1000)
 
   socket.on('join-room', socketErrorHandler(joinRoom, socket));
   socket.on("change-location", socketErrorHandler(changeLocation, socket));
-  socket.on("driver-disconnect", socketErrorHandler(removeUser, socket));
-  socket.on('disconnect', () => {
-    console.log("a user disconnected.");
+  socket.on('disconnect', async () => {
+    console.log(`a user disconnected - ${id}.`);
+    await redis.del(id);
   });
 });
 
