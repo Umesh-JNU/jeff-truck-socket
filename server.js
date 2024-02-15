@@ -50,7 +50,8 @@ io.on('connection', async (socket) => {
     const drivers = await redisGet({}, socket);
     socket.emit('driver-loc-change', drivers);
     console.log({ drivers });
-  }, 60 * 1000)
+  }, 5 * 1000)
+  // }, 60 * 1000)
 
   socket.on('join-room', socketErrorHandler(joinRoom, socket));
   socket.on("change-location", socketErrorHandler(changeLocation, socket));
