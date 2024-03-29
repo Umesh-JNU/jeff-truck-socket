@@ -46,6 +46,18 @@ io.on('connection', async (socket) => {
     cb({ status: 'OK' });
   }
 
+  function login(driverId, cb) {
+    socket.join(driverId);
+    cb({ status: 'OK' });
+  }
+
+  function shiftChange({ tripId, prevDriverId }, cb) {
+    // console.log(tripId, prevDriverId)
+    // emit event to previous driver to let him know that driver is changed
+    socket.to(prevDriverId).emit('driver-change', { tripId });
+    cb({ status: 'OK' });
+  }
+
   setInterval(async () => {
     const drivers = await redisGet({}, socket);
     socket.emit('driver-loc-change', drivers);
@@ -53,8 +65,10 @@ io.on('connection', async (socket) => {
   }, 5 * 1000)
   // }, 60 * 1000)
 
+  socket.on('login', socketErrorHandler(login, socket));
   socket.on('join-room', socketErrorHandler(joinRoom, socket));
   socket.on("change-location", socketErrorHandler(changeLocation, socket));
+  socket.on('shift-change', socketErrorHandler(shiftChange, socket));
   socket.on('disconnect', async () => {
     console.log(`a user disconnected - ${id}.`);
     await redis.del(id);
