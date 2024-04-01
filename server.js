@@ -52,7 +52,7 @@ io.on('connection', async (socket) => {
   }
 
   function shiftChange({ tripId, prevDriverId }, cb) {
-    // console.log(tripId, prevDriverId)
+    console.log(tripId, prevDriverId)
     // emit event to previous driver to let him know that driver is changed
     socket.to(prevDriverId).emit('driver-change', { tripId });
     cb({ status: 'OK' });
@@ -62,7 +62,8 @@ io.on('connection', async (socket) => {
     const drivers = await redisGet({}, socket);
     socket.emit('driver-loc-change', drivers);
     console.log({ drivers });
-  }, 5 * 1000)
+  }, 30 * 1000)
+  // }, 5 * 1000)
   // }, 60 * 1000)
 
   socket.on('login', socketErrorHandler(login, socket));
