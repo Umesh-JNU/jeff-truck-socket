@@ -2,7 +2,7 @@ const http = require('http');
 const dotenv = require('dotenv');
 const express = require('express');
 const { Server } = require('socket.io');
-const { connectDatabase } = require("./config/database");
+// const { connectDatabase } = require("./config/database");
 
 const { socketErrorHandler } = require("./utils/errorHandler");
 const { redis, redisGet, redisSet, redisDel } = require("./utils/redis");
@@ -18,7 +18,7 @@ const io = new Server(server, {
   }
 });
 
-connectDatabase();
+// connectDatabase();
 
 // --------------------------- REDIS ------------------------------
 (async () => {
@@ -37,6 +37,16 @@ io.on('connection', async (socket) => {
   }
 
   async function changeLocation({ userId, body, roomId }, cb) {
+    /**
+     * userId: user id
+     * body: comma separated lat,long,driver_name 
+     * roomId: tripId
+     * eg: data = {
+     *     userId: driver._id,
+     *     body: "LAT,LNG,DRIVER_NAME",
+     *     roomId: trip._id
+     * }
+     */
     if (roomId) {
       socket.to(roomId).emit('new-location', body);
     }
